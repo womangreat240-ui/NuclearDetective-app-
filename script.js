@@ -140,7 +140,6 @@ let totalAttempts = 0;
 const tubeDay = "test-tube-day.png";
 const tubeNight = "test-tube-night.png";
 
-// --- نظام الصوت ---
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playSound(type) {
@@ -182,7 +181,6 @@ function playSound(type) {
     }
 }
 
-// --- التهيئة الأساسية ---
 window.onload = () => {
     applyTheme(localStorage.getItem("theme") || "day");
     initSelectOptions();
@@ -335,7 +333,6 @@ function startTypewriter(text) {
     type();
 }
 
-// --- أحداث الأزرار ---
 document.getElementById("actionBtn").onclick = () => {
     if(activeLevel === 0) showScreen("enrichmentLab");
     else if(activeLevel === 1) { resetFissionStage(); showScreen("fissionLab"); }
@@ -370,7 +367,6 @@ function startEnrichmentAnimation(targetPercent) {
     }, 40);
 }
 
-// --- محاكاة الإطلاق والفيزياء ---
 function initFissionGame() {
     const proj = document.getElementById("projectileN");
     const barrel = document.getElementById("fissionBarrel");
@@ -437,7 +433,6 @@ function performGuidedFlight(proj, target, callback) {
     requestAnimationFrame(animate);
 }
 
-// --- ليفل 4: الكتلة الحرجة ---
 function setupCriticalLevel() {
     criticalShots = 0; const sections = ['areaBelow', 'areaAt', 'areaAbove'];
     sections.forEach((id) => {
@@ -446,10 +441,15 @@ function setupCriticalLevel() {
         let columns = 3;
         for(let i=0; i<count; i++) {
             const ball = document.createElement("div"); ball.className = "critical-ball"; ball.textContent = "U235";
-            let col = i % columns;
-            let row = Math.floor(i / columns);
-            ball.style.left = (10 + col * 30 + (Math.random() * 20)) + "%"; 
-            ball.style.top = (5 + row * (85 / Math.ceil(count/columns)) + (Math.random() * 2)) + "%";
+            if (id === 'areaAbove') {
+                ball.style.left = (Math.random() * 80 + 5) + "%";
+                ball.style.top = (Math.random() * 85 + 5) + "%";
+            } else {
+                let col = i % columns;
+                let row = Math.floor(i / columns);
+                ball.style.left = (10 + col * 30 + (Math.random() * 20)) + "%"; 
+                ball.style.top = (5 + row * (85 / Math.ceil(count/columns)) + (Math.random() * 2)) + "%";
+            }
             area.appendChild(ball);
         }
     });
@@ -493,7 +493,6 @@ function triggerAdvancedChain(area, startNode, delayMult, dieProb, chainLimit = 
     explode(startNode);
 }
 
-// --- ليفل 2: الانشطار ---
 function triggerFission() {
     const flash = document.getElementById("fissionFlash"); const target = document.getElementById("targetU235");
     const canvas = document.getElementById("fissionCanvas");
@@ -518,7 +517,6 @@ function resetFissionStage() {
     document.querySelectorAll(".fission-ball").forEach(b => b.remove());
 }
 
-// --- ليفل 3: التفاعل المتسلسل ---
 function setupChainLevel() {
     const canvas = document.getElementById("chainCanvas"); canvas.innerHTML = ""; chainDone = false;
     const proj = document.getElementById("chainProjectile"); const barrel = document.getElementById("chainBarrel");
@@ -566,7 +564,6 @@ function checkChainEnd() {
     }
 }
 
-// --- ليفل 5: البناء النهائي والتقييم ---
 function startConstructionLevel() { constStep = 1; totalAttempts = 0; showScreen("constructionLab"); resetConstLab(); }
 
 function initConstructionLogic() {
@@ -640,7 +637,6 @@ function showEvaluation() {
     document.getElementById("retryLevelBtn").onclick = startConstructionLevel;
 }
 
-// --- وظائف المودال (التنبيهات) ---
 function showModal(type, msg) {
     const modal = document.getElementById("customAlert"); const title = document.getElementById("modalTitle");
     const body = document.getElementById("modalBody"); const footer = document.getElementById("modalFooter");
@@ -669,7 +665,6 @@ function showModal(type, msg) {
 function closeModal(id) { document.getElementById(id).style.display = "none"; }
 function resetLab() { document.getElementById("runBtn").disabled = false; document.getElementById("enrichedBar").style.height = "0.7%"; document.getElementById("currentEnrichedVal").textContent = "0.7%"; document.getElementById("enrichmentSelect").value = ""; document.getElementById("usageDisplay").textContent = translations[currentLang].waitingUsage; }
 
-// --- التنقل والثيم ---
 document.querySelectorAll(".back-to-home").forEach(el => el.onclick = () => showScreen("app"));
 document.querySelectorAll(".back-to-myths").forEach(el => el.onclick = () => showScreen("mythsApp"));
 document.querySelectorAll(".back-to-view").forEach(el => el.onclick = () => showScreen("levelView"));
