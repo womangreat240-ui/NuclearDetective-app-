@@ -1,4 +1,3 @@
-/* script.js */
 const translations = {
     ar: {
         welcome: "مرحباً بك عزيزي المحقق النووي",
@@ -129,7 +128,7 @@ const translations = {
 };
 
 let currentLang = localStorage.getItem("lang") || "ar";
-let highestLevel = 1;
+let highestLevel = parseInt(localStorage.getItem("highestLevel")) || 1;
 let activeLevel = 0;
 let typewriterTimer = null;
 let criticalShots = 0;
@@ -139,8 +138,17 @@ let totalAttempts = 0;
 const tubeDay = "test-tube-day.png";
 const tubeNight = "test-tube-night.png";
 
+function saveProgress(lvl) {
+    if (lvl > highestLevel) {
+        highestLevel = lvl;
+        localStorage.setItem("highestLevel", highestLevel);
+    }
+}
+
 window.onload = () => {
+    document.body.style.transition = "none";
     applyTheme(localStorage.getItem("theme") || "day");
+    setTimeout(() => { document.body.style.transition = "background 0.1s ease, color 0.1s"; }, 100);
     initSelectOptions();
     updateUI();
     
@@ -294,7 +302,7 @@ function startEnrichmentAnimation(targetPercent) {
             current = targetPercent;
             clearInterval(interval);
             bar.classList.remove("shaking");
-            highestLevel = Math.max(highestLevel, 2);
+            saveProgress(2);
             setTimeout(() => { showModal("success", translations[currentLang].successMsg); }, 2000); 
         }
         bar.style.height = current + "%";
@@ -399,7 +407,7 @@ function handleCriticalLaunch(target) {
     let dieProb = criticalShots === 0 ? 1.0 : (criticalShots === 1 ? 0.1 : 0);
     triggerAdvancedChain(currentArea, target, speed, dieProb, criticalShots === 0 ? 1 : 0);
     criticalShots++;
-    if (criticalShots === 3) { setTimeout(() => { showModal("noteCritical", translations[currentLang].noteBody); }, 1500); }
+    if (criticalShots === 3) { saveProgress(5); setTimeout(() => { showModal("noteCritical", translations[currentLang].noteBody); }, 1500); }
     else { setTimeout(resetCriticalLauncher, 1500); }
 }
 
@@ -429,6 +437,7 @@ function triggerFission() {
             const el = document.createElement("div"); el.className = "fission-ball"; el.style.width = el.style.height = f.s + "px"; el.style.backgroundColor = f.c; el.textContent = f.txt; el.style.left = "50%"; el.style.top = "50%"; canvas.appendChild(el);
             setTimeout(() => { el.style.transform = `translate(${f.x}px, ${f.y}px)`; }, 50);
         });
+        saveProgress(3);
         setTimeout(() => showModal("fissionNote", translations[currentLang].fissionNote), 2500); 
     }, 400);
 }
@@ -483,7 +492,7 @@ function checkChainEnd() {
     const remains = Array.from(document.querySelectorAll(".chain-nucleus")).filter(n => n.dataset.hit !== "true");
     const activeNeutrons = document.querySelectorAll(".chain-neutron").length;
     if(remains.length === 0 && activeNeutrons === 0 && !chainDone) {
-        chainDone = true; setTimeout(() => { highestLevel = Math.max(highestLevel, 3); showModal("successChain", translations[currentLang].finalSuccessChain); }, 1000);
+        chainDone = true; saveProgress(4); setTimeout(() => { showModal("successChain", translations[currentLang].finalSuccessChain); }, 1000);
     }
 }
 
@@ -578,7 +587,7 @@ function showModal(type, msg) {
         const bRestart = document.createElement("button"); bRestart.className = "modal-btn btn-sky"; bRestart.textContent = translations[currentLang].btnRestart;
         bRestart.onclick = () => { if(activeLevel === 1) resetFissionStage(); else if(activeLevel === 2) setupChainLevel(); else if(activeLevel === 3) setupCriticalLevel(); else resetLab(); closeModal('customAlert'); };
         const bNext = document.createElement("button"); bNext.className = "modal-btn btn-sky"; bNext.textContent = translations[currentLang].btnNext;
-        bNext.onclick = () => { highestLevel = Math.max(highestLevel, activeLevel + 2); closeModal('customAlert'); if (activeLevel < 4) openLevel(activeLevel + 1); else showScreen('levelsApp'); };
+        bNext.onclick = () => { closeModal('customAlert'); if (activeLevel < 4) openLevel(activeLevel + 1); else showScreen('levelsApp'); };
         footer.appendChild(bRestart); footer.appendChild(bNext);
     } else title.textContent = "⚠";
     modal.style.display = "flex";
@@ -597,7 +606,9 @@ document.querySelectorAll(".theme-toggle-btn").forEach(btn => btn.onclick = () =
 document.querySelectorAll(".lang-toggle-btn").forEach(btn => btn.onclick = () => { currentLang = (currentLang === "ar" ? "en" : "ar"); localStorage.setItem("lang", currentLang); updateUI(); closeAllMenus(); });
 
 function toggleTheme() { 
+    document.body.style.transition = "none";
     applyTheme(document.body.classList.contains("day") ? "night" : "day"); 
+    setTimeout(() => { document.body.style.transition = "background 0.1s ease, color 0.1s"; }, 0);
     if(activeLevel === 4) resetConstLab(); 
 }
 function applyTheme(theme) { 
