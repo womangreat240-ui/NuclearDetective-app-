@@ -1,3 +1,4 @@
+// sw.js
 const cacheName = 'nuclear-detective-v2';
 
 const assets = [
