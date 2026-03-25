@@ -1,3 +1,4 @@
+// script.js
 const translations = {
     ar: {
         welcome: "مرحباً بك عزيزي المحقق النووي",
@@ -201,7 +202,8 @@ function showScreen(id) {
         target.style.display = "flex"; 
         setTimeout(() => target.classList.add("show"), 10); 
         if(id === "evaluationLab") {
-            target.className = `evaluation-container ${document.body.classList.contains('day') ? 'day' : 'night'}`;
+            const currentTheme = document.body.classList.contains('day') ? 'day' : 'night';
+            target.className = `evaluation-container ${currentTheme}`;
         }
     }
 }
@@ -607,7 +609,14 @@ document.querySelectorAll(".lang-toggle-btn").forEach(btn => btn.onclick = () =>
 
 function toggleTheme() { 
     document.body.style.transition = "none";
-    applyTheme(document.body.classList.contains("day") ? "night" : "day"); 
+    const newTheme = document.body.classList.contains("day") ? "night" : "day";
+    applyTheme(newTheme); 
+    
+    const evaluationLab = document.getElementById("evaluationLab");
+    if(evaluationLab && evaluationLab.style.display === "flex") {
+        evaluationLab.className = `evaluation-container ${newTheme}`;
+    }
+
     setTimeout(() => { document.body.style.transition = "background 0.1s ease, color 0.1s"; }, 0);
     if(activeLevel === 4) resetConstLab(); 
 }
