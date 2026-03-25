@@ -1,0 +1,51 @@
+const cacheName = 'nuclear-detective-v2';
+
+const assets = [
+  './',
+  './index.html',
+  './style.css',
+  './script.js',
+  './manifest.json',
+  './bg-day.jpg',
+  './bg-night.jpg',
+  './lab-bg-day.jpg',
+  './lab-bg-night.jpg',
+  './board-frame.jpg',
+  './test-tube-day.png',
+  './test-tube-night.png',
+  './reactor-day.png',
+  './reactor-night.png',
+  './electricity-day.png',
+  './electricity-night.png',
+  './bomb-day.png',
+  './bomb-night.png',
+  './explosion-day.png',
+  './explosion-night.png'
+];
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(cacheName).then(cache => {
+      return cache.addAll(assets);
+    })
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(keys.map(key => {
+        if (key !== cacheName) return caches.delete(key);
+      }));
+    })
+  );
+});
+
+self.addEventListener('fetch', e => {
+  e.respondWith(
+    caches.match(e.request).then(response => {
+      return response || fetch(e.request);
+    })
+  );
+});
