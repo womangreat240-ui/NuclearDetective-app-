@@ -1,5 +1,6 @@
+/* style.css */
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-body { transition: background 0.6s ease, color 0.6s; overflow-x: hidden; background-attachment: fixed; background-size: cover; background-position: center; touch-action: manipulation; }
+body { transition: background 0.1s ease, color 0.1s; overflow-x: hidden; background-attachment: fixed; background-size: cover; background-position: center; touch-action: manipulation; }
 .day { background-image: url("bg-day.jpg"); color: #1a2a6c; }
 .night { background-image: url("bg-night.jpg"); color: #fff; }
 .day .box { background: rgba(255, 255, 255, 0.7); color: #1a2a6c; border: 2px solid #3498db; font-weight: bold; }
