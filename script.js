@@ -1,3 +1,4 @@
+/* script.js */
 const translations = {
     ar: {
         welcome: "مرحباً بك عزيزي المحقق النووي",
@@ -609,3 +610,4 @@ document.querySelectorAll(".box[id*='SettingsBtn']").forEach(btn => {
 function closeAllMenus() { document.querySelectorAll(".settings-menu").forEach(m => m.style.display = "none"); }
 window.onclick = closeAllMenus;
 document.getElementById("start").onclick = () => showScreen("mythsApp");
+
