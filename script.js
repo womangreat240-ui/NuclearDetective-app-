@@ -1,8 +1,8 @@
-// script.js
 const translations = {
     ar: {
         welcome: "مرحباً بك عزيزي المحقق النووي",
         start: "ابدأ الرحلة",
+        resetProgress: "إعادة ضبط التقدم",
         mythsTitle: "الخرافات",
         mythsSubtitle: "اختر الخرافة لكشف الحقيقة",
         levelsTitle: "المستويات",
@@ -21,7 +21,7 @@ const translations = {
         usageCivil: "المفاعلات النووية المدينة",
         usageResearch: "المفاعلات البحثية",
         usageWeapons: "الأسلحة النووية",
-        mythNames: ["المفاعل النووي = قنبلة ذرية", "قريباً ⏳", "قريباً ⏳"],
+        mythNames: ["المفاعل النووي = القنبلة الذرية ", "قريباً ⏳", "قريباً ⏳"],
         levelNames: ["المستوى الأول 🔓", "المستوى الثاني 🔓", "المستوى الثالث 🔓", "المستوى الرابع 🔓", "المستوى الخامس 🔓"],
         lvl1: "المستوى الأول",
         lvl2: "المستوى الثاني",
@@ -66,6 +66,7 @@ const translations = {
     en: {
         welcome: "Welcome, Nuclear Detective",
         start: "Start Mission",
+        resetProgress: "Reset Progress",
         mythsTitle: "Myths",
         mythsSubtitle: "Choose a myth to uncover the truth",
         levelsTitle: "Levels",
@@ -93,7 +94,7 @@ const translations = {
         lvl5: "Level 5",
         levelContent: [
             "Natural uranium consists primarily of uranium-238 at approximately 99.3% and uranium-235 at approximately 0.7%.\nEnrichment is the process of increasing the proportion of the U-235 isotope in uranium relative to its natural abundance.",
-            "Nuclear fission is the splitting of a heavy heavy atomic nucleus into two smaller nuclei, accompanied by the release of energy and neutrons.",
+            "Nuclear fission is the splitting of a heavy atomic nucleus into two smaller nuclei, accompanied by the release of energy and neutrons.",
             "Nuclear chain reaction is a series of nuclear fissions, where the fission of a heavy nucleus releases neutrons that induce further fissions. This reaction continues automatically only if the fissile mass is equal to or greater than the critical mass.",
             "Critical Mass: The minimum amount of fissile material required to maintain a continuous chain reaction without stopping.\nControlled Reaction: A chain reaction that occurs at or near the critical mass and is controlled to prevent rapid multiplication of fissions and the release of excessive energy.\nUncontrolled Reaction: A chain reaction that occurs above the critical mass and is not controlled, leading to rapid multiplication of fissions and the release of massive energy.",
             "Scientific fact: A nuclear reactor exploding like an atomic bomb is physically impossible because its fuel is low-enriched (3–5%) and operates under a controlled reaction that prevents any nuclear explosion. An atomic bomb requires highly enriched fuel (≥90%) and functions through an uncontrolled reaction that produces massive explosions within moments. A reactor may experience serious malfunctions such as loss of cooling or partial meltdown, which can lead to radiation release or localized pressure- and heat-driven explosions, but these are entirely different from a nuclear explosion caused by an atomic bomb."
@@ -139,27 +140,53 @@ let totalAttempts = 0;
 const tubeDay = "test-tube-day.png";
 const tubeNight = "test-tube-night.png";
 
-function saveProgress(lvl) {
-    if (lvl > highestLevel) {
-        highestLevel = lvl;
-        localStorage.setItem("highestLevel", highestLevel);
+// --- نظام الصوت ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+
+    if (type === 'click') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+        gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'explosion') {
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.5);
+        gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc.start(now); osc.stop(now + 0.5);
+    } else if (type === 'hit') {
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.2);
+        gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.start(now); osc.stop(now + 0.2);
+    } else if (type === 'launch') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(1000, now + 0.3);
+        gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now); osc.stop(now + 0.3);
+    } else if (type === 'success') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.1); osc.frequency.setValueAtTime(783.99, now + 0.2);
+        gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now); osc.stop(now + 0.4);
+    } else if (type === 'error') {
+        osc.type = 'square'; osc.frequency.setValueAtTime(150, now);
+        gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now); osc.stop(now + 0.3);
     }
 }
 
+// --- التهيئة الأساسية ---
 window.onload = () => {
-    document.body.style.transition = "none";
     applyTheme(localStorage.getItem("theme") || "day");
-    setTimeout(() => { document.body.style.transition = "background 0.1s ease, color 0.1s"; }, 100);
     initSelectOptions();
     updateUI();
-    
-    document.getElementById("lang").value = currentLang;
-    document.getElementById("lang").onchange = (e) => {
-        currentLang = e.target.value;
-        localStorage.setItem("lang", currentLang);
-        updateUI();
-    };
-
     setTimeout(() => { document.getElementById("splash").classList.add("hide"); showScreen("app"); }, 1500);
     initFissionGame();
     initChainControl();
@@ -174,7 +201,36 @@ window.onload = () => {
         else if (val == 20) display.textContent = translations[currentLang].usageResearch;
         else if (val >= 90) display.textContent = translations[currentLang].usageWeapons;
     });
+
+    document.getElementById("lang").addEventListener("change", (e) => {
+        currentLang = e.target.value;
+        localStorage.setItem("lang", currentLang);
+        updateUI();
+    });
+
+    document.addEventListener('click', (e) => {
+        if(e.target.closest('button') || e.target.closest('.box') || e.target.closest('select')) {
+            playSound('click');
+        }
+    });
+
+    document.getElementById("resetProgressBtn").onclick = () => {
+        if(confirm(currentLang === "ar" ? "هل أنت متأكد من مسح كل تقدمك؟" : "Are you sure you want to reset all progress?")) {
+            highestLevel = 1; saveProgress(); updateUI();
+        }
+    };
+    checkResetBtnVisibility();
 };
+
+function saveProgress() {
+    localStorage.setItem("highestLevel", highestLevel);
+    checkResetBtnVisibility();
+}
+
+function checkResetBtnVisibility() {
+    const btn = document.getElementById("resetProgressBtn");
+    if (highestLevel >= 5) btn.style.display = "none";
+}
 
 function initSelectOptions() {
     const g1 = document.getElementById("group1");
@@ -202,8 +258,8 @@ function showScreen(id) {
         target.style.display = "flex"; 
         setTimeout(() => target.classList.add("show"), 10); 
         if(id === "evaluationLab") {
-            const currentTheme = document.body.classList.contains('day') ? 'day' : 'night';
-            target.className = `evaluation-container ${currentTheme}`;
+            target.className = `evaluation-container ${document.body.classList.contains('day') ? 'day' : 'night'}`;
+            if(totalAttempts === 0) playSound('success');
         }
     }
 }
@@ -214,6 +270,7 @@ function updateUI() {
         if (translations[currentLang][key]) el.textContent = translations[currentLang][key];
     });
     document.body.dir = currentLang === "ar" ? "rtl" : "ltr";
+    document.getElementById("lang").value = currentLang;
     
     const levelView = document.getElementById("levelView");
     if(levelView && levelView.classList.contains("show")) {
@@ -244,9 +301,9 @@ function renderLevels() {
     if(!list) return; list.innerHTML = "";
     translations[currentLang].levelNames.forEach((name, i) => {
         const div = document.createElement("div");
-        div.className = `box ${i + 1 > highestLevel ? 'locked' : ''}`;
+        div.className = `box ${i + 1 > highestLevel && highestLevel < 5 ? 'locked' : ''}`;
         div.style.margin = "10px"; div.textContent = name;
-        div.onclick = () => (i + 1 <= highestLevel) && openLevel(i);
+        div.onclick = () => (i + 1 <= highestLevel || highestLevel >= 5) && openLevel(i);
         list.appendChild(div);
     });
 }
@@ -278,6 +335,7 @@ function startTypewriter(text) {
     type();
 }
 
+// --- أحداث الأزرار ---
 document.getElementById("actionBtn").onclick = () => {
     if(activeLevel === 0) showScreen("enrichmentLab");
     else if(activeLevel === 1) { resetFissionStage(); showScreen("fissionLab"); }
@@ -304,14 +362,15 @@ function startEnrichmentAnimation(targetPercent) {
             current = targetPercent;
             clearInterval(interval);
             bar.classList.remove("shaking");
-            saveProgress(2);
-            setTimeout(() => { showModal("success", translations[currentLang].successMsg); }, 2000); 
+            highestLevel = Math.max(highestLevel, 2); saveProgress();
+            setTimeout(() => { playSound('success'); showModal("success", translations[currentLang].successMsg); }, 2000); 
         }
         bar.style.height = current + "%";
         textVal.textContent = current.toFixed(1) + "%";
     }, 40);
 }
 
+// --- محاكاة الإطلاق والفيزياء ---
 function initFissionGame() {
     const proj = document.getElementById("projectileN");
     const barrel = document.getElementById("fissionBarrel");
@@ -348,7 +407,7 @@ function setupLauncher(projectile, barrel, staticTarget, onHitCallback) {
         if (!isActive) return; isActive = false;
         const target = staticTarget || findTargetForLauncher(projectile.id);
         if (!target) return;
-        performGuidedFlight(projectile, target, () => onHitCallback(target));
+        playSound('launch'); performGuidedFlight(projectile, target, () => onHitCallback(target));
     };
     projectile.onmousedown = projectile.ontouchstart = (e) => { e.preventDefault(); isActive = true; };
     window.addEventListener('mousemove', handlePointer); window.addEventListener('touchmove', handlePointer);
@@ -378,14 +437,19 @@ function performGuidedFlight(proj, target, callback) {
     requestAnimationFrame(animate);
 }
 
+// --- ليفل 4: الكتلة الحرجة ---
 function setupCriticalLevel() {
     criticalShots = 0; const sections = ['areaBelow', 'areaAt', 'areaAbove'];
     sections.forEach((id) => {
         const area = document.getElementById(id); area.innerHTML = "";
         let count = id === 'areaBelow' ? 5 : (id === 'areaAt' ? 18 : 80);
+        let columns = 3;
         for(let i=0; i<count; i++) {
             const ball = document.createElement("div"); ball.className = "critical-ball"; ball.textContent = "U235";
-            ball.style.left = (Math.random() * 80 + 10) + "%"; ball.style.top = (Math.random() * 80 + 10) + "%";
+            let col = i % columns;
+            let row = Math.floor(i / columns);
+            ball.style.left = (10 + col * 30 + (Math.random() * 20)) + "%"; 
+            ball.style.top = (5 + row * (85 / Math.ceil(count/columns)) + (Math.random() * 2)) + "%";
             area.appendChild(ball);
         }
     });
@@ -409,7 +473,7 @@ function handleCriticalLaunch(target) {
     let dieProb = criticalShots === 0 ? 1.0 : (criticalShots === 1 ? 0.1 : 0);
     triggerAdvancedChain(currentArea, target, speed, dieProb, criticalShots === 0 ? 1 : 0);
     criticalShots++;
-    if (criticalShots === 3) { saveProgress(5); setTimeout(() => { showModal("noteCritical", translations[currentLang].noteBody); }, 1500); }
+    if (criticalShots === 3) { setTimeout(() => { highestLevel = Math.max(highestLevel, 5); saveProgress(); playSound('success'); showModal("noteCritical", translations[currentLang].noteBody); }, 1500); }
     else { setTimeout(resetCriticalLauncher, 1500); }
 }
 
@@ -417,7 +481,8 @@ function triggerAdvancedChain(area, startNode, delayMult, dieProb, chainLimit = 
     const balls = Array.from(area.querySelectorAll(".critical-ball"));
     function explode(node) {
         if(!node || node.dataset.hit) return;
-        node.dataset.hit = "true"; node.style.background = "white"; node.style.transform = "translate(-50%, -50%) scale(1.5)";
+        node.dataset.hit = "true"; node.style.background = "white"; node.style.transform = "scale(1.5)";
+        playSound('hit');
         setTimeout(() => {
             node.style.opacity = "0"; if (chainLimit === 1) return;
             balls.filter(b => !b.dataset.hit && !b.dataset.targeted).slice(0, 3).forEach((t, i) => {
@@ -428,10 +493,12 @@ function triggerAdvancedChain(area, startNode, delayMult, dieProb, chainLimit = 
     explode(startNode);
 }
 
+// --- ليفل 2: الانشطار ---
 function triggerFission() {
     const flash = document.getElementById("fissionFlash"); const target = document.getElementById("targetU235");
     const canvas = document.getElementById("fissionCanvas");
     flash.style.opacity = "1"; flash.style.transform = "scale(60)"; target.style.display = "none";
+    playSound('explosion');
     setTimeout(() => {
         flash.style.opacity = "0"; flash.style.transform = "scale(1)";
         const fragments = [{ c: '#3498db', s: 60, x: -100, y: -80, txt: '' },{ c: '#2ecc71', s: 60, x: 100, y: -70, txt: '' },{ c: '#e74c3c', s: 25, x: -50, y: 120, txt: 'n' },{ c: '#e74c3c', s: 25, x: 50, y: 120, txt: 'n' },{ c: '#e74c3c', s: 25, x: 0, y: 150, txt: 'n' }];
@@ -439,7 +506,7 @@ function triggerFission() {
             const el = document.createElement("div"); el.className = "fission-ball"; el.style.width = el.style.height = f.s + "px"; el.style.backgroundColor = f.c; el.textContent = f.txt; el.style.left = "50%"; el.style.top = "50%"; canvas.appendChild(el);
             setTimeout(() => { el.style.transform = `translate(${f.x}px, ${f.y}px)`; }, 50);
         });
-        saveProgress(3);
+        highestLevel = Math.max(highestLevel, 3); saveProgress();
         setTimeout(() => showModal("fissionNote", translations[currentLang].fissionNote), 2500); 
     }, 400);
 }
@@ -451,6 +518,7 @@ function resetFissionStage() {
     document.querySelectorAll(".fission-ball").forEach(b => b.remove());
 }
 
+// --- ليفل 3: التفاعل المتسلسل ---
 function setupChainLevel() {
     const canvas = document.getElementById("chainCanvas"); canvas.innerHTML = ""; chainDone = false;
     const proj = document.getElementById("chainProjectile"); const barrel = document.getElementById("chainBarrel");
@@ -465,7 +533,7 @@ function setupChainLevel() {
 function startRealChain(el) { hitNucleus(el); }
 function hitNucleus(el) {
     if(!el || el.dataset.hit === "true") return;
-    el.dataset.hit = "true"; el.style.transform = "translateX(-50%) scale(1.2)"; el.style.background = "white"; 
+    el.dataset.hit = "true"; el.style.transform = "translateX(-50%) scale(1.2)"; el.style.background = "white"; playSound('hit');
     setTimeout(() => {
         el.style.opacity = "0";
         for(let i=0; i<3; i++) { setTimeout(() => createChainNeutron(el.offsetLeft + 22, el.offsetTop + 22), i * 50); }
@@ -494,20 +562,21 @@ function checkChainEnd() {
     const remains = Array.from(document.querySelectorAll(".chain-nucleus")).filter(n => n.dataset.hit !== "true");
     const activeNeutrons = document.querySelectorAll(".chain-neutron").length;
     if(remains.length === 0 && activeNeutrons === 0 && !chainDone) {
-        chainDone = true; saveProgress(4); setTimeout(() => { showModal("successChain", translations[currentLang].finalSuccessChain); }, 1000);
+        chainDone = true; setTimeout(() => { highestLevel = Math.max(highestLevel, 4); saveProgress(); playSound('success'); showModal("successChain", translations[currentLang].finalSuccessChain); }, 1000);
     }
 }
 
+// --- ليفل 5: البناء النهائي والتقييم ---
 function startConstructionLevel() { constStep = 1; totalAttempts = 0; showScreen("constructionLab"); resetConstLab(); }
 
 function initConstructionLogic() {
     document.getElementById("formBtn").onclick = () => {
         const enVal = document.getElementById("selectEnrichmentLevel").value;
         const reVal = document.getElementById("selectReactionType").value;
-        if(!enVal || !reVal) { showModal("alert", translations[currentLang].errorSelect); return; }
+        if(!enVal || !reVal) { playSound('error'); showModal("alert", translations[currentLang].errorSelect); return; }
         let isCorrect = (constStep === 1) ? (parseFloat(enVal) <= 5.0 && reVal === "controlled") : (parseFloat(enVal) >= 90 && reVal === "uncontrolled");
         if(isCorrect) { document.getElementById("formBtn").disabled = true; handleSuccessConst(); }
-        else { totalAttempts++; showModal("retryConst", translations[currentLang].errorPhysical); }
+        else { playSound('error'); totalAttempts++; showModal("retryConst", translations[currentLang].errorPhysical); }
     };
     document.getElementById("constNextBtn").onclick = () => { if(constStep === 1) { constStep = 2; resetConstLab(); } else showEvaluation(); };
 }
@@ -533,7 +602,7 @@ function updateConstUI() {
 
 function handleSuccessConst() {
     const img = document.getElementById("constMainImg"); const isNight = document.body.classList.contains("night");
-    img.classList.add("transform-active"); 
+    img.classList.add("transform-active"); playSound('success');
     
     let seq;
     if (constStep === 1) {
@@ -563,13 +632,15 @@ function showEvaluation() {
     document.getElementById("scoreCircle").style.strokeDashoffset = 283 - (283 * score) / 100;
     const isWin = score >= 50;
     document.getElementById("evalMessage").textContent = isWin ? translations[currentLang].congrats + " 🥳✨" : translations[currentLang].pity + " 🥺💔";
-    document.getElementById("suggestionPromptText").style.display = isWin ? "block" : "none";
+    document.getElementById("suggestionLabel").style.display = isWin ? "block" : "none";
+    document.getElementById("suggestionText").style.display = isWin ? "block" : "none";
     document.getElementById("suggestionBtn").style.display = isWin ? "block" : "none";
     document.getElementById("retryLevelBtn").style.display = isWin ? "none" : "block";
     document.getElementById("suggestionBtn").onclick = () => window.open(translations[currentLang].formUri, "_blank");
     document.getElementById("retryLevelBtn").onclick = startConstructionLevel;
 }
 
+// --- وظائف المودال (التنبيهات) ---
 function showModal(type, msg) {
     const modal = document.getElementById("customAlert"); const title = document.getElementById("modalTitle");
     const body = document.getElementById("modalBody"); const footer = document.getElementById("modalFooter");
@@ -589,7 +660,7 @@ function showModal(type, msg) {
         const bRestart = document.createElement("button"); bRestart.className = "modal-btn btn-sky"; bRestart.textContent = translations[currentLang].btnRestart;
         bRestart.onclick = () => { if(activeLevel === 1) resetFissionStage(); else if(activeLevel === 2) setupChainLevel(); else if(activeLevel === 3) setupCriticalLevel(); else resetLab(); closeModal('customAlert'); };
         const bNext = document.createElement("button"); bNext.className = "modal-btn btn-sky"; bNext.textContent = translations[currentLang].btnNext;
-        bNext.onclick = () => { closeModal('customAlert'); if (activeLevel < 4) openLevel(activeLevel + 1); else showScreen('levelsApp'); };
+        bNext.onclick = () => { highestLevel = Math.max(highestLevel, activeLevel + 2); saveProgress(); closeModal('customAlert'); if (activeLevel < 4) openLevel(activeLevel + 1); else showScreen('levelsApp'); };
         footer.appendChild(bRestart); footer.appendChild(bNext);
     } else title.textContent = "⚠";
     modal.style.display = "flex";
@@ -598,6 +669,7 @@ function showModal(type, msg) {
 function closeModal(id) { document.getElementById(id).style.display = "none"; }
 function resetLab() { document.getElementById("runBtn").disabled = false; document.getElementById("enrichedBar").style.height = "0.7%"; document.getElementById("currentEnrichedVal").textContent = "0.7%"; document.getElementById("enrichmentSelect").value = ""; document.getElementById("usageDisplay").textContent = translations[currentLang].waitingUsage; }
 
+// --- التنقل والثيم ---
 document.querySelectorAll(".back-to-home").forEach(el => el.onclick = () => showScreen("app"));
 document.querySelectorAll(".back-to-myths").forEach(el => el.onclick = () => showScreen("mythsApp"));
 document.querySelectorAll(".back-to-view").forEach(el => el.onclick = () => showScreen("levelView"));
@@ -608,17 +680,14 @@ document.querySelectorAll(".theme-toggle-btn").forEach(btn => btn.onclick = () =
 document.querySelectorAll(".lang-toggle-btn").forEach(btn => btn.onclick = () => { currentLang = (currentLang === "ar" ? "en" : "ar"); localStorage.setItem("lang", currentLang); updateUI(); closeAllMenus(); });
 
 function toggleTheme() { 
-    document.body.style.transition = "none";
-    const newTheme = document.body.classList.contains("day") ? "night" : "day";
-    applyTheme(newTheme); 
-    
-    const evaluationLab = document.getElementById("evaluationLab");
-    if(evaluationLab && evaluationLab.style.display === "flex") {
-        evaluationLab.className = `evaluation-container ${newTheme}`;
-    }
-
-    setTimeout(() => { document.body.style.transition = "background 0.1s ease, color 0.1s"; }, 0);
+    applyTheme(document.body.classList.contains("day") ? "night" : "day"); 
     if(activeLevel === 4) resetConstLab(); 
+    if(document.getElementById("evaluationLab").classList.contains("show")) {
+        const evalLab = document.getElementById("evaluationLab");
+        evalLab.style.display = "flex";
+        evalLab.classList.add("show");
+        evalLab.className = `evaluation-container ${document.body.classList.contains('day') ? 'day' : 'night'} show`;
+    }
 }
 function applyTheme(theme) { 
     document.body.className = theme; localStorage.setItem("theme", theme); 
@@ -630,3 +699,4 @@ document.querySelectorAll(".box[id*='SettingsBtn']").forEach(btn => {
 function closeAllMenus() { document.querySelectorAll(".settings-menu").forEach(m => m.style.display = "none"); }
 window.onclick = closeAllMenus;
 document.getElementById("start").onclick = () => showScreen("mythsApp");
+
